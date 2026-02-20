@@ -1,0 +1,84 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "typewiki"
+version = "0.1.0"
+description = "Copilot for Typeform's help center common questions"
+authors = [
+    { name = "Mo Afsharmoqaddam", email = "moafshaar@gmail.com"}
+]
+readme = { file = "README.md", content-type = "text/markdown" }
+classifiers = [
+    "Intended Audience :: Developers",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3.12"
+]
+keywords = ["typewiki"]
+dependencies = [
+    "loguru==0.7.3",
+    "starlette==0.52.1",
+    "uvicorn==0.41.0",
+]
+requires-python = ">=3.12"
+
+[project.optional-dependencies]
+dev = [
+    "bumpversion",
+    "twine",
+    # linting
+    "flake8",
+    "flake8-bugbear",
+    "flake8-eradicate",
+    "pep8-naming",
+    "dlint",
+    # type checking
+    "mypy",
+    "pre-commit",
+]
+
+test = [
+    "pytest",
+    "coverage",
+    "pytest-cov",
+]
+
+[project.urls]
+Repository = "https://github.com/MoAfshar/TypeWiki"
+
+[project.scripts]
+typewiki = "typewiki.cli:main"
+
+[tool.setuptools]
+zip-safe = false
+package-dir = { "" =  "src" }
+# need to include-package-data if MANIFEST.in is defined
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["typewiki*"]
+
+[tool.uv]
+package = true
+
+[tool.pytest.ini_options]
+addopts = "--doctest-modules"
+
+[tool.black]
+line-length = 100
+skip-string-normalization = true
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+line_length = 100
+known_first_party = ["typewiki", "tests"]
+default_section = "THIRDPARTY"
+
+[tool.mypy]
+ignore_missing_imports = true
