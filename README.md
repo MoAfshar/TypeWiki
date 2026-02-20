@@ -11,9 +11,15 @@ Install [uv](https://github.com/astral-sh/uv), a fast Python package installer:
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-After installation, restart your terminal or run:
+After installation, restart your terminal.
+
+**Note (macOS):** Check if `make` is installed:
 ```bash
-source $HOME/.local/bin/env
+make --version
+```
+If not available, install Xcode Command Line Tools:
+```bash
+xcode-select --install
 ```
 
 ### Installation
