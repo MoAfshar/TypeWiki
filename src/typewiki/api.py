@@ -1,3 +1,4 @@
+import aiohttp
 from langchain_openai import OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from pinecone import Pinecone
@@ -23,7 +24,10 @@ class TypeWikiApp(TypeWikiInstance):
         embeddings = OpenAIEmbeddings(model=self.config.openai_embedding_model_name)
         self.vector_store = PineconeVectorStore(index=index, embedding=embeddings)
 
-        logger.info('hi')
+        timeout = aiohttp.ClientTimeout(self.config.http_client_timeout_seconds)
+        self.client = aiohttp.ClientSession(timeout=timeout)
+
+        logger.info('Application configuration and setup is complete and running.')
 
     async def on_shutdown(self):
         logger.info('Bon Voyage!')
