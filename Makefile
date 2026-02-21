@@ -58,7 +58,7 @@ dist: clean ## Builds source and wheel package
 venv: ## Create a virtual environment
 	@echo ---------------------------------------------------------------
 	@echo CREATING VIRTUAL ENVIRONMENT...
-	uv venv
+	uv venv --python 3.12
 	@echo VIRTUAL ENVIRONMENT CREATED
 	@echo Run 'source .venv/bin/activate' to activate it
 	@echo ---------------------------------------------------------------
