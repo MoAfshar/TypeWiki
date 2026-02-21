@@ -39,8 +39,6 @@ class TypeWikiApp(TypeWikiInstance):
     @endpoint(path='/v1/chat', method='POST')
     async def chat(self, request: Request):
         data = ChatRequest(**(await request.json()))
-        logger.info(data)
-        # TODO: retrieval + generation
 
         resp = ChatResponse(
             conversation_id=data.session_id,  # or rename to session_id everywhere for consistency
