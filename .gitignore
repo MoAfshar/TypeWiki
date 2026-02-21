@@ -118,3 +118,14 @@ ENV/
 
 # for playing with migrations
 migrations-dev/
+
+# Airflow artifacts (generated at runtime)
+src/typewiki/airflow/airflow.db
+src/typewiki/airflow/airflow.db-shm
+src/typewiki/airflow/airflow.db-wal
+src/typewiki/airflow/airflow-webserver.pid
+src/typewiki/airflow/logs/
+src/typewiki/airflow/standalone_admin_password.txt
+src/typewiki/airflow/simple_auth_manager_passwords.json.generated
+src/typewiki/airflow/dags/__pycache__/
+.airflow/

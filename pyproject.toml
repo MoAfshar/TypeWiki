@@ -17,11 +17,18 @@ classifiers = [
 ]
 keywords = ["typewiki"]
 dependencies = [
+    "bs4==0.0.2",
+    "langchain==1.2.10",
+    "langchain-community==0.4.1",
+    "langchain-openai==1.1.10",
+    "langchain-pinecone==0.2.13",
+    "langchain-text-splitters==1.1.1",
     "loguru==0.7.3",
-    "starlette==0.52.1",
-    "uvicorn==0.41.0",
+    "pypdf==6.7.1",
+    "starlette==0.48.0",
+    "uvicorn==0.40.0",
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.13"
 
 [project.optional-dependencies]
 dev = [
@@ -36,6 +43,7 @@ dev = [
     # type checking
     "mypy",
     "pre-commit",
+    "apache-airflow==3.1.7",
 ]
 
 test = [

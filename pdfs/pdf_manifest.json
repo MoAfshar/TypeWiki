@@ -1,0 +1,16 @@
+{
+  "articles": [
+    {
+      "filename": "help-typeform-Add-a-Multi-Question-Page-to-your-form.pdf",
+      "url": "https://help.typeform.com/hc/en-us/articles/27703634781076-Add-a-Multi-Question-Page-to-your-form",
+      "title": "Add a Multi-Question Page to your form",
+      "category": "Form Building"
+    },
+    {
+      "filename": "help-typeform-Create-multi-language-forms.pdf",
+      "url": "https://help.typeform.com/hc/en-us/articles/23541138531732-Create-multi-language-forms",
+      "title": "Create multi-language forms",
+      "category": "Localization"
+    }
+  ]
+}

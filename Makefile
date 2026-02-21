@@ -1,4 +1,4 @@
-.PHONY: clean clean-test clean-pyc clean-build docs help
+.PHONY: clean clean-test clean-pyc clean-build docs help airflow-init airflow-test airflow-list airflow-run airflow-clean
 .DEFAULT_GOAL := help
 
 help:
@@ -58,7 +58,7 @@ dist: clean ## Builds source and wheel package
 venv: ## Create a virtual environment
 	@echo ---------------------------------------------------------------
 	@echo CREATING VIRTUAL ENVIRONMENT...
-	uv venv
+	uv venv --python 3.12
 	@echo VIRTUAL ENVIRONMENT CREATED
 	@echo Run 'source .venv/bin/activate' to activate it
 	@echo ---------------------------------------------------------------
@@ -80,4 +80,44 @@ install: clean ## Install the package to the active Python's site-package via pi
 	@echo TypeWiki info:
 	@echo ----------------------------------------------------------------
 	pip show typewiki
+	@echo ----------------------------------------------------------------
+
+# =============================================================================
+# Airflow Commands
+# =============================================================================
+
+AIRFLOW_HOME ?= $(shell pwd)/src/typewiki/airflow
+
+airflow-init: ## Initialize Airflow database (run once after setup)
+	@echo ----------------------------------------------------------------
+	@echo INITIALIZING AIRFLOW DATABASE...
+	AIRFLOW_HOME=$(AIRFLOW_HOME) uv run airflow db migrate
+	@echo AIRFLOW DATABASE INITIALIZED
+	@echo ----------------------------------------------------------------
+
+airflow-test: ## Test the Help Center ingest DAG
+	@echo ----------------------------------------------------------------
+	@echo TESTING HELP CENTER INGEST DAG...
+	AIRFLOW_HOME=$(AIRFLOW_HOME) uv run airflow dags test typewiki_helpcenter_ingest $$(date +%Y-%m-%d)
+	@echo DAG TEST COMPLETE
+	@echo ----------------------------------------------------------------
+
+airflow-list: ## List all available DAGs
+	AIRFLOW_HOME=$(AIRFLOW_HOME) uv run airflow dags list
+
+airflow-run: ## Start Airflow standalone (webserver + scheduler)
+	@echo ----------------------------------------------------------------
+	@echo STARTING AIRFLOW STANDALONE...
+	@echo Access the UI at http://localhost:8080
+	@echo ----------------------------------------------------------------
+	AIRFLOW_HOME=$(AIRFLOW_HOME) uv run airflow standalone
+
+airflow-clean: ## Remove Airflow artifacts (database, logs)
+	@echo ----------------------------------------------------------------
+	@echo CLEANING AIRFLOW ARTIFACTS...
+	rm -f $(AIRFLOW_HOME)/airflow.db
+	rm -rf $(AIRFLOW_HOME)/logs/
+	rm -f $(AIRFLOW_HOME)/airflow-webserver.pid
+	rm -f $(AIRFLOW_HOME)/simple_auth_manager_passwords.json.generated
+	@echo AIRFLOW ARTIFACTS CLEANED
 	@echo ----------------------------------------------------------------
