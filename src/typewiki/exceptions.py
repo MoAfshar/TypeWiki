@@ -1,0 +1,2 @@
+class PineconeIndexNotProvisionedError(RuntimeError):
+    pass

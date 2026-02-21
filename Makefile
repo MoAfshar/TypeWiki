@@ -118,6 +118,6 @@ airflow-clean: ## Remove Airflow artifacts (database, logs)
 	rm -f $(AIRFLOW_HOME)/airflow.db
 	rm -rf $(AIRFLOW_HOME)/logs/
 	rm -f $(AIRFLOW_HOME)/airflow-webserver.pid
-	rm -f $(AIRFLOW_HOME)/standalone_admin_password.txt
+	rm -f $(AIRFLOW_HOME)/simple_auth_manager_passwords.json.generated
 	@echo AIRFLOW ARTIFACTS CLEANED
 	@echo ----------------------------------------------------------------
