@@ -2,10 +2,13 @@ import aiohttp
 from langchain_openai import OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from pinecone import Pinecone
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 from typewiki.config import TypeWikiConfig
+from typewiki.datamodels import ChatRequest, ChatResponse
 from typewiki.exceptions import PineconeIndexNotProvisionedError
-from typewiki.utils import TypeWikiInstance, logger
+from typewiki.utils import TypeWikiInstance, endpoint, logger
 
 
 class TypeWikiApp(TypeWikiInstance):
@@ -30,4 +33,20 @@ class TypeWikiApp(TypeWikiInstance):
         logger.info('Application configuration and setup is complete and running.')
 
     async def on_shutdown(self):
+        await self.client.close()
         logger.info('Bon Voyage!')
+
+    @endpoint(path='/v1/chat', method='POST')
+    async def chat(self, request: Request):
+        data = ChatRequest(**(await request.json()))
+        logger.info(data)
+        # TODO: retrieval + generation
+
+        resp = ChatResponse(
+            conversation_id=data.session_id,  # or rename to session_id everywhere for consistency
+            answer='Stub answer (wire retrieval + LLM next).',
+            sources=[],
+            model=None,
+        )
+
+        return JSONResponse(resp.model_dump(mode='json'), status_code=200)
