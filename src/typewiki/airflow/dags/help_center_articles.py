@@ -18,7 +18,9 @@ from typing import Any
 
 from airflow.sdk import dag, task
 from langchain_community.document_loaders import PyPDFLoader
+from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from pinecone import Pinecone, ServerlessSpec
 from pydantic import BaseModel, Field, computed_field
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
@@ -27,6 +29,11 @@ MANIFEST_PATH = PDF_DIR / 'pdf_manifest.json'
 
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 200
+
+PINECONE_INDEX_NAME = os.getenv('PINECONE_INDEX_NAME', 'typewiki-helpcenter-dev-v1')
+PINECONE_DIMENSION = 3072  # text-embedding-3-large dimension
+OPENAI_EMBEDDING_MODEL = os.getenv('OPENAI_EMBEDDING_MODEL_NAME', 'text-embedding-3-large')
+PINECONE_BATCH_SIZE = 100  # Pinecone recommends batches of 100
 
 
 class ArticleMetadata(BaseModel):
@@ -253,6 +260,52 @@ def create_text_splitter() -> RecursiveCharacterTextSplitter:
     )
 
 
+def init_pinecone_index() -> Any:
+    """Initialize Pinecone and create index if it doesn't exist.
+
+    Returns:
+        Pinecone Index object ready for upserts.
+
+    Raises:
+        ValueError: If PINECONE_API_KEY environment variable is not set.
+    """
+    api_key = os.getenv('PINECONE_API_KEY')
+    if not api_key:
+        raise ValueError('PINECONE_API_KEY environment variable is required')
+
+    pc = Pinecone(api_key=api_key)
+
+    if not pc.has_index(PINECONE_INDEX_NAME):
+        print(f"Creating Pinecone index: {PINECONE_INDEX_NAME}")
+        pc.create_index(
+            name=PINECONE_INDEX_NAME,
+            dimension=PINECONE_DIMENSION,
+            metric='cosine',
+            spec=ServerlessSpec(cloud='aws', region='us-east-1'),
+        )
+        print(f"Index '{PINECONE_INDEX_NAME}' created successfully")
+    else:
+        print(f"Using existing Pinecone index: {PINECONE_INDEX_NAME}")
+
+    return pc.Index(PINECONE_INDEX_NAME)
+
+
+def get_embeddings_client() -> OpenAIEmbeddings:
+    """Create an OpenAI embeddings client.
+
+    Returns:
+        OpenAIEmbeddings instance configured with the embedding model.
+
+    Raises:
+        ValueError: If OPENAI_API_KEY environment variable is not set.
+    """
+    api_key = os.getenv('OPENAI_API_KEY')
+    if not api_key:
+        raise ValueError('OPENAI_API_KEY environment variable is required')
+
+    return OpenAIEmbeddings(model=OPENAI_EMBEDDING_MODEL, api_key=api_key)
+
+
 def chunk_document(
     pages: list[dict[str, Any]],
     splitter: RecursiveCharacterTextSplitter,
@@ -378,7 +431,7 @@ def typewiki_helpcenter_ingest():
 
         return articles_to_process
 
-    @task
+    @task(show_return_value_in_logs=False)
     def extract_and_chunk(article_data: dict[str, Any]) -> list[dict[str, Any]]:
         """Extract text from a PDF and split into chunks.
 
@@ -412,7 +465,7 @@ def typewiki_helpcenter_ingest():
 
         return [chunk.model_dump() for chunk in chunks]
 
-    @task
+    @task(show_return_value_in_logs=False)
     def prepare_for_storage(all_chunks: list[list[dict[str, Any]]]) -> dict[str, Any]:
         """Combine and validate all chunks for storage.
 
@@ -445,9 +498,76 @@ def typewiki_helpcenter_ingest():
             },
         }
 
+    @task
+    def upsert_to_pinecone(storage_data: dict[str, Any]) -> dict[str, Any]:
+        """Generate embeddings and upsert chunks to Pinecone.
+
+        This task:
+        1. Initializes Pinecone and creates the index if needed
+        2. Generates embeddings for all chunk texts using OpenAI
+        3. Upserts vectors with metadata to Pinecone in batches
+
+        Args:
+            storage_data: Output from prepare_for_storage with 'chunks' list.
+
+        Returns:
+            Summary dict with upsert statistics.
+        """
+        chunks_data = storage_data['chunks']
+        if not chunks_data:
+            print('No chunks to upsert')
+            return {'upserted': 0, 'status': 'empty'}
+
+        print(f"\nInitializing Pinecone index: {PINECONE_INDEX_NAME}")
+        index = init_pinecone_index()
+
+        print(f"Initializing OpenAI embeddings: {OPENAI_EMBEDDING_MODEL}")
+        embeddings_client = get_embeddings_client()
+
+        chunks = [DocumentChunk.model_validate(c) for c in chunks_data]
+        texts = [chunk.text for chunk in chunks]
+
+        print(f"Generating embeddings for {len(texts)} chunks...")
+        embeddings = embeddings_client.embed_documents(texts)
+        print(f"Generated {len(embeddings)} embeddings (dimension: {len(embeddings[0])})")
+
+        vectors_to_upsert = []
+        for chunk, embedding in zip(chunks, embeddings):
+            pinecone_record = chunk.to_pinecone_format()
+            pinecone_record['values'] = embedding
+            vectors_to_upsert.append(pinecone_record)
+
+        total_upserted = 0
+        num_batches = (len(vectors_to_upsert) + PINECONE_BATCH_SIZE - 1) // PINECONE_BATCH_SIZE
+
+        print(f"Upserting {len(vectors_to_upsert)} vectors in {num_batches} batches...")
+
+        for i in range(0, len(vectors_to_upsert), PINECONE_BATCH_SIZE):
+            batch = vectors_to_upsert[i : i + PINECONE_BATCH_SIZE]
+            batch_num = (i // PINECONE_BATCH_SIZE) + 1
+
+            index.upsert(vectors=batch)
+            total_upserted += len(batch)
+
+            print(f"  Batch {batch_num}/{num_batches}: upserted {len(batch)} vectors")
+
+        print(f"\nSuccessfully upserted {total_upserted} vectors to '{PINECONE_INDEX_NAME}'")
+
+        index_stats = index.describe_index_stats()
+        print(f"Index stats: {index_stats.total_vector_count} total vectors")
+
+        return {
+            'upserted': total_upserted,
+            'index_name': PINECONE_INDEX_NAME,
+            'embedding_model': OPENAI_EMBEDDING_MODEL,
+            'embedding_dimension': len(embeddings[0]) if embeddings else 0,
+            'status': 'success',
+        }
+
     articles = load_manifest_task()
     chunks_per_pdf = extract_and_chunk.expand(article_data=articles)
-    prepare_for_storage(chunks_per_pdf)
+    storage_ready = prepare_for_storage(chunks_per_pdf)
+    upsert_to_pinecone(storage_ready)
 
 
 typewiki_helpcenter_dag = typewiki_helpcenter_ingest()

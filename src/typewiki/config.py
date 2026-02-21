@@ -7,3 +7,4 @@ class TypeWikiConfig(BaseSettings):
     openai_embedding_model_name: str = 'text-embedding-3-large'
     openai_api_key: SecretStr
     pinecone_api_key: SecretStr
+    pinecone_index_name: str = 'typewiki-helpcenter-dev-v1'
