@@ -1,4 +1,4 @@
-.PHONY: clean clean-test clean-pyc clean-build docs help airflow-init airflow-test airflow-list airflow-run airflow-clean
+.PHONY: clean clean-test clean-pyc clean-build docs help run airflow-init airflow-ingest airflow-list airflow-run airflow-clean
 .DEFAULT_GOAL := help
 
 help:
@@ -82,6 +82,13 @@ install: clean ## Install the package to the active Python's site-package via pi
 	pip show typewiki
 	@echo ----------------------------------------------------------------
 
+run: ## Start the TypeWiki API service
+	@echo ----------------------------------------------------------------
+	@echo STARTING TYPEWIKI API SERVICE...
+	@echo Access the API at http://localhost:8000
+	@echo ----------------------------------------------------------------
+	typewiki
+
 # =============================================================================
 # Airflow Commands
 # =============================================================================
@@ -95,11 +102,11 @@ airflow-init: ## Initialize Airflow database (run once after setup)
 	@echo AIRFLOW DATABASE INITIALIZED
 	@echo ----------------------------------------------------------------
 
-airflow-test: ## Test the Help Center ingest DAG
+airflow-ingest: ## Run the Help Center ingestion pipeline to populate Pinecone
 	@echo ----------------------------------------------------------------
-	@echo TESTING HELP CENTER INGEST DAG...
+	@echo RUNNING HELP CENTER INGESTION PIPELINE...
 	AIRFLOW_HOME=$(AIRFLOW_HOME) uv run airflow dags test typewiki_helpcenter_ingest $$(date +%Y-%m-%d)
-	@echo DAG TEST COMPLETE
+	@echo INGESTION COMPLETE
 	@echo ----------------------------------------------------------------
 
 airflow-list: ## List all available DAGs
