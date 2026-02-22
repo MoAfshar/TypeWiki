@@ -51,6 +51,12 @@ xcode-select --install
    - `PINECONE_API_KEY` - Your Pinecone API key for vector storage
    - `PINECONE_INDEX_NAME` - Name of your Pinecone index
 
+5. **Export environment variables:**
+   ```bash
+   export $(cat .env | xargs)
+   ```
+   Run this command in your terminal session to load the environment variables. You'll need to run this each time you open a new terminal, or add it to your shell profile.
+
 ## Airflow Pipeline Setup
 
 The project uses Apache Airflow to orchestrate the Help Center PDF ingestion pipeline.
@@ -111,8 +117,11 @@ Access the UI at **http://localhost:8080**
 
 ## Running the API Service
 
-Once the vector database is populated, start the TypeWiki API service:
-
+Once the vector database is populated, start the TypeWiki API service by running in the terminal:
+```bash
+typewiki
+```
+or 
 ```bash
 make run
 ```
