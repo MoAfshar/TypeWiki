@@ -163,6 +163,87 @@ The API will be available at **http://localhost:8000**.
 
 ---
 
+## Docker & Deployment
+
+### Docker Setup
+
+The project includes Docker configurations for both the API service and Airflow pipeline.
+
+#### Building Docker Images
+
+```bash
+# Build the API service image
+docker build -f docker/api/Dockerfile -t typewiki-api .
+
+# Build the Airflow image
+docker build -f docker/airflow/Dockerfile -t typewiki-airflow .
+```
+
+#### Running with Docker Compose
+
+The easiest way to run both services locally is with Docker Compose:
+
+```bash
+# Start all services
+docker-compose up
+
+# Start only the API service
+docker-compose up api
+
+# Start only Airflow
+docker-compose up airflow
+
+# Stop all services
+docker-compose down
+```
+
+**Prerequisites:** Ensure your `.env` file is configured with valid API keys before running.
+
+- **API Service**: http://localhost:8000
+- **Airflow UI**: http://localhost:8080
+
+### Kubernetes Deployment
+
+Helm charts are provided for deploying to Kubernetes clusters.
+
+#### API Service Deployment
+
+```bash
+# Install the API service
+helm install typewiki-api deploy/k8s/typewiki-api/ \
+  --set secrets.openaiApiKey=<your-openai-key> \
+  --set secrets.pineconeApiKey=<your-pinecone-key>
+
+# Upgrade with new values
+helm upgrade typewiki-api deploy/k8s/typewiki-api/ -f my-values.yaml
+
+# Uninstall
+helm uninstall typewiki-api
+```
+
+#### Airflow Ingestion Pipeline
+
+```bash
+# Install Airflow CronJob (runs daily at 2 AM by default)
+helm install typewiki-airflow deploy/k8s/typewiki-airflow/ \
+  --set secrets.openaiApiKey=<your-openai-key> \
+  --set secrets.pineconeApiKey=<your-pinecone-key>
+
+# Trigger manual ingestion
+kubectl create job --from=cronjob/typewiki-airflow typewiki-airflow-manual
+```
+
+#### Production Considerations
+
+For production Kubernetes deployments:
+
+1. **Secrets Management**: Use external secret management (e.g., External Secrets Operator, HashiCorp Vault) instead of Helm-managed secrets
+2. **Image Registry**: Push images to a container registry (ECR, GCR, Docker Hub) and update `image.repository` in values
+3. **Ingress**: Enable and configure ingress for external access
+4. **Airflow**: Consider using the [official Apache Airflow Helm Chart](https://airflow.apache.org/docs/helm-chart/stable/index.html) for production workloads with proper database backend
+
+---
+
 ## Technical Architecture
 
 ### Overview
@@ -219,8 +300,15 @@ TypeWiki/
 │       ├── airflow.cfg        # Airflow configuration
 │       └── dags/
 │           └── help_center_articles.py  # PDF ingestion DAG
+├── docker/                    # Docker configurations
+│   ├── api/Dockerfile         # API service container (multi-stage build)
+│   └── airflow/Dockerfile     # Airflow pipeline container
+├── deploy/k8s/                # Kubernetes Helm charts
+│   ├── typewiki-api/          # API service Helm chart
+│   └── typewiki-airflow/      # Airflow CronJob Helm chart
 ├── pdfs/                      # Help Center PDF articles
 │   └── pdf_manifest.json      # Metadata for each PDF (title, URL, category)
+├── docker-compose.yaml        # Local multi-container orchestration
 ├── Makefile                   # Development commands and shortcuts
 ├── pyproject.toml             # Project dependencies and metadata
 ├── template.env               # Environment variable template
