@@ -8,3 +8,4 @@ class TypeWikiConfig(BaseSettings):
     openai_api_key: SecretStr
     pinecone_api_key: SecretStr
     pinecone_index_name: str = 'typewiki-helpcenter-dev-v1'
+    http_client_timeout_seconds: int = 300  # 5 mins
