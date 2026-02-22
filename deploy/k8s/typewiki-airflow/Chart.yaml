@@ -1,0 +1,13 @@
+apiVersion: v2
+name: typewiki-airflow
+description: Helm chart for TypeWiki Airflow - Help Center PDF ingestion pipeline
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - typewiki
+  - airflow
+  - ingestion
+  - pipeline
+maintainers:
+  - name: TypeWiki Team
