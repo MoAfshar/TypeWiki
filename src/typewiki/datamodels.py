@@ -33,17 +33,6 @@ class ChatRequest(BaseModel):
     )
 
 
-class SourceRef(BaseModel):
-    """
-    One retrieved chunk (or doc) used to support the answer.
-    """
-
-    chunk_id: str = Field(..., description='Deterministic id for the chunk/vector')
-    score: float = Field(..., ge=0.0, description='Similarity score (higher is more relevant)')
-    article_title: str = Field(..., description='Human-readable article title')
-    source_url: str = Field(..., description='Canonical source URL for attribution')
-
-
 class ChatResponse(BaseModel):
     """
     Response model for POST /v1/chat
@@ -51,7 +40,5 @@ class ChatResponse(BaseModel):
 
     conversation_id: str = Field(..., description='Conversation/thread id')
     answer: str = Field(..., description='Assistant answer text')
-    sources: list[SourceRef] = Field(default_factory=list)
-
     model: str | None = Field(default=None, description='LLM model name used')
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

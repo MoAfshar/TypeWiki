@@ -4,11 +4,23 @@ Prompt templates for the TypeWiki RAG Copilot.
 This module contains the unified prompt template used to generate responses
 from the LLM. All variables are injected dynamically at runtime using
 LangChain's PromptTemplate.
+
+Available topics are automatically loaded from pdfs/pdf_manifest.json.
 """
 
-from __future__ import annotations
+import json
+from functools import lru_cache
+from pathlib import Path
 
+from langchain_core.documents import Document
 from langchain_core.prompts import PromptTemplate
+
+from typewiki.datamodels import ChatMessage
+
+SearchResults = list[tuple[Document, float]]
+
+PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
+PDF_MANIFEST_PATH = PROJECT_ROOT / 'pdfs' / 'pdf_manifest.json'
 
 COPILOT_PROMPT_TEMPLATE = """
 # TypeWiki Help Center Assistant
@@ -117,6 +129,23 @@ your current knowledge base and mention the specific topics you DO have knowledg
 COPILOT_PROMPT = PromptTemplate.from_template(COPILOT_PROMPT_TEMPLATE)
 
 
+@lru_cache(maxsize=1)
+def load_pdf_manifest() -> list[dict[str, str]]:
+    """
+    Load available articles from the PDF manifest file.
+
+    Returns:
+        List of article dicts with 'title', 'category', 'url', 'filename' keys
+
+    Raises:
+        FileNotFoundError: If manifest file doesn't exist
+        json.JSONDecodeError: If manifest file is invalid JSON
+    """
+    with PDF_MANIFEST_PATH.open() as f:
+        manifest = json.load(f)
+    return manifest.get('articles', [])
+
+
 def format_available_topics(articles: list[dict[str, str]]) -> str:
     """
     Format the available topics from the PDF manifest into a markdown table.
@@ -139,12 +168,12 @@ def format_available_topics(articles: list[dict[str, str]]) -> str:
     return '\n'.join(lines)
 
 
-def format_history(history: list[dict[str, str]]) -> str:
+def format_history(history: list[ChatMessage]) -> str:
     """
     Format conversation history into a readable string.
 
     Args:
-        history: List of message dicts with 'role' and 'content' keys
+        history: List of ChatMessage objects with 'role' and 'content' attributes
 
     Returns:
         Formatted history string for prompt injection
@@ -154,35 +183,41 @@ def format_history(history: list[dict[str, str]]) -> str:
 
     formatted_lines = []
     for msg in history:
-        role = msg.get('role', 'unknown').capitalize()
-        content = msg.get('content', '')
-        formatted_lines.append(f"**{role}**: {content}")
+        role = msg.role.capitalize()
+        formatted_lines.append(f"**{role}**: {msg.content}")
 
     return '\n\n'.join(formatted_lines)
 
 
-def format_context(chunks: list[dict[str, str]]) -> str:
+def format_context(search_results: SearchResults) -> str:
     """
-    Format retrieved chunks into a readable context string.
+    Format retrieved documents from vector search into a readable context string.
 
     Args:
-        chunks: List of retrieved chunk dicts with 'content', 'article_title', 'source_url'
+        search_results: List of (Document, score) tuples from similarity search
 
     Returns:
         Formatted context string for prompt injection
     """
-    if not chunks:
+    if not search_results:
         return '_No relevant context retrieved._'
 
     formatted_chunks = []
-    for i, chunk in enumerate(chunks, 1):
-        title = chunk.get('article_title', 'Unknown Article')
-        url = chunk.get('source_url', '')
-        content = chunk.get('content', '')
-        score = chunk.get('score', 0.0)
+    for i, (doc, score) in enumerate(search_results, 1):
+        metadata = doc.metadata
+        title = metadata.get('article_title', 'Unknown Article')
+        url = metadata.get('source_url', '')
+        category = metadata.get('article_category', 'General')
+        content = doc.page_content
 
-        chunk_text = f"""### Source {i}: {title} {content} _Source: [{title}]({url}) 
-        | Relevance: {score:.2f}_"""
+        chunk_text = f"""### Source {i}: {title}
+
+**Category**: {category}
+
+{content}
+
+_Source: [{title}]({url}) | Relevance: {score:.2f}_
+"""
         formatted_chunks.append(chunk_text)
 
     return '\n---\n'.join(formatted_chunks)
@@ -190,25 +225,27 @@ def format_context(chunks: list[dict[str, str]]) -> str:
 
 def build_prompt(
     user_message: str,
-    context_chunks: list[dict[str, str]],
-    available_articles: list[dict[str, str]],
-    history: list[dict[str, str]] | None = None,
+    search_results: SearchResults,
+    history: list[ChatMessage] | None = None,
 ) -> str:
     """
     Build the complete prompt with all variables injected.
 
+    Available topics are automatically loaded from pdfs/pdf_manifest.json.
+
     Args:
         user_message: The current user question
-        context_chunks: Retrieved chunks from vector database
-        available_articles: List of available articles from PDF manifest
-        history: Optional conversation history
+        search_results: List of (Document, score) tuples from vector similarity search
+        history: Optional conversation history as list of ChatMessage objects
 
     Returns:
         Complete prompt string ready for LLM
     """
+    available_articles = load_pdf_manifest()
+
     return COPILOT_PROMPT.format(
         available_topics=format_available_topics(available_articles),
-        context=format_context(context_chunks),
+        context=format_context(search_results),
         history=format_history(history or []),
         user_message=user_message,
     )
