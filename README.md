@@ -203,6 +203,41 @@ TypeWiki is a Retrieval-Augmented Generation (RAG) based chatbot designed to ans
 | **Data Validation** | Pydantic | Runtime data validation and settings management |
 | **Package Manager** | uv | Fast Python dependency management |
 
+### Project Structure
+
+```
+TypeWiki/
+├── src/typewiki/              # Main application source code
+│   ├── api.py                 # API endpoint definitions and request handling
+│   ├── config.py              # Pydantic settings for environment configuration
+│   ├── datamodels.py          # Request/response schemas (ChatRequest, ChatResponse)
+│   ├── utils.py               # Starlette base class, endpoint decorator, logging
+│   ├── exceptions.py          # Custom exception classes
+│   ├── prompts/
+│   │   └── copilot.py         # Prompt template and context formatting functions
+│   └── airflow/
+│       ├── airflow.cfg        # Airflow configuration
+│       └── dags/
+│           └── help_center_articles.py  # PDF ingestion DAG
+├── pdfs/                      # Help Center PDF articles
+│   └── pdf_manifest.json      # Metadata for each PDF (title, URL, category)
+├── Makefile                   # Development commands and shortcuts
+├── pyproject.toml             # Project dependencies and metadata
+├── template.env               # Environment variable template
+└── README.md                  # This file
+```
+
+#### Key Files
+
+| File | Responsibility |
+|------|----------------|
+| `api.py` | Defines `TypeWikiApp` class with `/v1/chat` endpoint. Initializes Pinecone vector store, OpenAI embeddings, and LLM on startup. Orchestrates the RAG flow: embed query → retrieve context → build prompt → generate response. |
+| `config.py` | Type-safe configuration using Pydantic `BaseSettings`. Loads API keys and model names from environment variables with secure handling via `SecretStr`. |
+| `datamodels.py` | Pydantic models for API contracts: `ChatRequest` (input), `ChatResponse` (output), and `ChatMessage` (history items). Provides runtime validation and serialization. |
+| `prompts/copilot.py` | Contains the prompt template and helper functions to format retrieved context, conversation history, and available topics into the final prompt string. |
+| `airflow/dags/help_center_articles.py` | Airflow DAG that reads PDFs, extracts text, chunks documents, generates embeddings, and upserts vectors to Pinecone. |
+| `pdf_manifest.json` | Source of truth for available articles. Used by both the ingestion pipeline (to process PDFs) and the prompt builder (to list available topics). |
+
 ### Strategy Behind Technology Choices
 
 **Starlette + Uvicorn over FastAPI:**
