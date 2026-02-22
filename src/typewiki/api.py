@@ -40,6 +40,10 @@ class TypeWikiApp(TypeWikiInstance):
         await self.client.close()
         logger.info('Bon Voyage!')
 
+    @endpoint(path='/health', method='GET')
+    async def health(self, request: Request):
+        return JSONResponse({'status': 'healthy'}, status_code=200)
+
     @endpoint(path='/v1/chat', method='POST')
     async def chat(self, request: Request):
         data = ChatRequest(**(await request.json()))

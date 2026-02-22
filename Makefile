@@ -94,30 +94,34 @@ run: ## Start the TypeWiki API service
 # =============================================================================
 
 AIRFLOW_HOME ?= $(shell pwd)/src/typewiki/airflow
+AIRFLOW_JWT_SECRET ?= $(or $(AIRFLOW_API_AUTH_JWT_SECRET),typewiki-local-dev-jwt-secret-key)
+
+# Common Airflow environment variables
+AIRFLOW_ENV = AIRFLOW_HOME=$(AIRFLOW_HOME) AIRFLOW__API_AUTH__JWT_SECRET=$(AIRFLOW_JWT_SECRET)
 
 airflow-init: ## Initialize Airflow database (run once after setup)
 	@echo ----------------------------------------------------------------
 	@echo INITIALIZING AIRFLOW DATABASE...
-	AIRFLOW_HOME=$(AIRFLOW_HOME) uv run airflow db migrate
+	$(AIRFLOW_ENV) uv run airflow db migrate
 	@echo AIRFLOW DATABASE INITIALIZED
 	@echo ----------------------------------------------------------------
 
 airflow-ingest: ## Run the Help Center ingestion pipeline to populate Pinecone
 	@echo ----------------------------------------------------------------
 	@echo RUNNING HELP CENTER INGESTION PIPELINE...
-	AIRFLOW_HOME=$(AIRFLOW_HOME) uv run airflow dags test typewiki_helpcenter_ingest $$(date +%Y-%m-%d)
+	$(AIRFLOW_ENV) uv run airflow dags test typewiki_helpcenter_ingest $$(date +%Y-%m-%d)
 	@echo INGESTION COMPLETE
 	@echo ----------------------------------------------------------------
 
 airflow-list: ## List all available DAGs
-	AIRFLOW_HOME=$(AIRFLOW_HOME) uv run airflow dags list
+	$(AIRFLOW_ENV) uv run airflow dags list
 
 airflow-run: ## Start Airflow standalone (webserver + scheduler)
 	@echo ----------------------------------------------------------------
 	@echo STARTING AIRFLOW STANDALONE...
 	@echo Access the UI at http://localhost:8080
 	@echo ----------------------------------------------------------------
-	AIRFLOW_HOME=$(AIRFLOW_HOME) uv run airflow standalone
+	$(AIRFLOW_ENV) uv run airflow standalone
 
 airflow-clean: ## Remove Airflow artifacts (database, logs)
 	@echo ----------------------------------------------------------------

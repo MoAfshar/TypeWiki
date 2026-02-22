@@ -1,0 +1,13 @@
+apiVersion: v2
+name: typewiki-api
+description: Helm chart for TypeWiki API - RAG-based Help Center Copilot
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - typewiki
+  - rag
+  - chatbot
+  - api
+maintainers:
+  - name: TypeWiki Team

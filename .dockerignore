@@ -1,38 +1,55 @@
+# Git
 .git
-Dockerfile
-.DS_Store
 .gitignore
-/env/*
-*__pycache__*
-*.pyc
-*.hypothesis
-*.egg-info/
-*.egg
-.tox/
-.coverage
-.coverage.*
-.cache
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
 .Python
-env/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-*.pyc
-.coverage
-env/
+.venv
 venv/
-.hypothesis/
+ENV/
+env/
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Environment and secrets
+.env
+*.env.local
+.env.*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.cursor/
+
+# Testing and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Airflow artifacts (not needed in API container)
+src/typewiki/airflow/airflow.db
+src/typewiki/airflow/logs/
+src/typewiki/airflow/*.pid
+src/typewiki/airflow/simple_auth_manager_passwords.json*
+
+# Documentation
 *.md
-Jenkinsfile
+!README.md
+
+# Docker
+docker/
+deploy/
+docker-compose*.yaml
+
+# Misc
+.DS_Store
+*.log

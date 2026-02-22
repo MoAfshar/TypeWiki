@@ -1,0 +1,74 @@
+# TypeWiki Docker Compose
+# Orchestrates API service and Airflow for local development
+#
+# Usage:
+#   docker-compose up              # Start all services
+#   docker-compose up api          # Start only the API service
+#   docker-compose up airflow      # Start only Airflow
+#   docker-compose down            # Stop all services
+#
+# Prerequisites:
+#   - Copy template.env to .env and fill in your API keys
+#   - Ensure Pinecone index exists (created manually or via Airflow)
+#
+# Airflow UI: http://localhost:8080
+#   Username and password obtained by running:
+#   docker exec typewiki-airflow cat /opt/airflow/simple_auth_manager_passwords.json.generated
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+    container_name: typewiki-api
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL_NAME=${OPENAI_MODEL_NAME:-gpt-4o-mini}
+      - OPENAI_EMBEDDING_MODEL_NAME=${OPENAI_EMBEDDING_MODEL_NAME:-text-embedding-3-large}
+      - PINECONE_API_KEY=${PINECONE_API_KEY}
+      - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME:-typewiki-helpcenter}
+      - HTTP_CLIENT_TIMEOUT_SECONDS=${HTTP_CLIENT_TIMEOUT_SECONDS:-300}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  airflow:
+    build:
+      context: .
+      dockerfile: docker/airflow/Dockerfile
+    container_name: typewiki-airflow
+    ports:
+      - "8080:8080"
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
+      - AIRFLOW__CORE__LOAD_EXAMPLES=false
+      - AIRFLOW__WEBSERVER__EXPOSE_CONFIG=true
+      - AIRFLOW__API_AUTH__JWT_SECRET=${AIRFLOW_API_AUTH_JWT_SECRET}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_EMBEDDING_MODEL_NAME=${OPENAI_EMBEDDING_MODEL_NAME:-text-embedding-3-large}
+      - PINECONE_API_KEY=${PINECONE_API_KEY}
+      - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME:-typewiki-helpcenter}
+      - TYPEWIKI_PDF_DIR=/opt/airflow/pdfs
+    volumes:
+      # Persist Airflow metadata database
+      - airflow-db:/opt/airflow
+      # Mount PDFs for easy updates without rebuilding
+      - ./pdfs:/opt/airflow/pdfs:ro
+    command: standalone
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  airflow-db:
+    driver: local

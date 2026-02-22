@@ -1,0 +1,73 @@
+# Default values for typewiki-airflow
+# This is a YAML-formatted file.
+
+image:
+  repository: typewiki-airflow
+  pullPolicy: IfNotPresent
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# CronJob configuration for scheduled ingestion
+cronjob:
+  enabled: true
+  # Cron schedule (default: daily at 2 AM)
+  schedule: "0 2 * * *"
+  # Timezone for the cron schedule
+  timeZone: "UTC"
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  concurrencyPolicy: Forbid
+  restartPolicy: OnFailure
+  backoffLimit: 3
+
+# One-time job configuration (for manual triggers)
+job:
+  enabled: false
+  ttlSecondsAfterFinished: 86400
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 512Mi
+  limits:
+    cpu: 1000m
+    memory: 2Gi
+
+# Environment configuration (non-sensitive)
+config:
+  pineconeIndexName: "typewiki-helpcenter"
+  airflowHome: "/opt/airflow"
+
+# Secrets configuration
+secrets:
+  provider: onepassword
+  existingSecret: ""
+  # 1Password / External Secrets Operator settings
+  onepassword:
+    enabled: true
+    secretStoreRef:
+      kind: ClusterSecretStore
+      name: onepassword-connect
+
+    refreshInterval: 1h
+
+    targetSecretName: typewiki-airflow-secrets
+
+    data:
+      - secretKey: PINECONE_API_KEY
+        remoteRef:
+          key: "typewiki/pinecone"
+          property: "api_key"
+
+# PDF volume configuration - For production, it's best to use S3/GCS
+pdfVolume:
+  # Use emptyDir (PDFs baked into image)
+  type: emptyDir
