@@ -1,6 +1,6 @@
 # TypeWiki Airflow Dockerfile
 
-FROM apache/airflow:slim-2.11.1-python3.12
+FROM apache/airflow:latest-python3.12
 
 USER airflow
 

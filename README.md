@@ -69,6 +69,15 @@ After installing dependencies, initialize the Airflow database:
 make airflow-init
 ```
 
+**Note on JWT Secret:** Airflow 3.x requires a JWT secret for internal API authentication. The Makefile includes a default secret for local development, but you can set your own by exporting `AIRFLOW_API_AUTH_JWT_SECRET` in your environment:
+
+```bash
+# Generate and export a custom JWT secret (optional for local dev)
+export AIRFLOW_API_AUTH_JWT_SECRET=$(openssl rand -hex 32)
+```
+
+If you encounter "Signature verification failed" errors after changing the secret, run `make airflow-clean` to reset the Airflow database.
+
 ### Adding More Help Center PDFs (Optional)
 
 The project comes with sample PDFs pre-configured in `pdfs/` and `pdfs/pdf_manifest.json`. You can run the pipeline immediately with the existing articles.
@@ -185,62 +194,56 @@ The easiest way to run both services locally is with Docker Compose:
 
 ```bash
 # Start all services
-docker-compose up
+docker compose up
 
 # Start only the API service
-docker-compose up api
+docker compose up api
 
 # Start only Airflow
-docker-compose up airflow
+docker compose up airflow
 
 # Stop all services
-docker-compose down
+docker compose down
 ```
 
 **Prerequisites:** Ensure your `.env` file is configured with valid API keys before running.
 
+**Important - Airflow JWT Secret:** The Docker Airflow instance requires a JWT secret for internal API authentication. Generate one and add it to your `.env` file:
+
+```bash
+# Generate a secure JWT secret
+openssl rand -hex 32
+```
+
+Add the generated value to your `.env` file:
+
+```
+AIRFLOW_API_AUTH_JWT_SECRET=<your-generated-secret>
+```
+
+This secret is used by Airflow 3.x for signing JWT tokens between internal components (scheduler, webserver, api-server). Without it, task execution will fail with "Signature verification failed" errors.
+
 - **API Service**: http://localhost:8000
 - **Airflow UI**: http://localhost:8080
 
+Username and password obtained by running:
+```bash
+docker exec typewiki-airflow cat /opt/airflow/simple_auth_manager_passwords.json.generated
+```
+
 ### Kubernetes Deployment
 
-Helm charts are provided for deploying to Kubernetes clusters.
-
-#### API Service Deployment
-
-```bash
-# Install the API service
-helm install typewiki-api deploy/k8s/typewiki-api/ \
-  --set secrets.openaiApiKey=<your-openai-key> \
-  --set secrets.pineconeApiKey=<your-pinecone-key>
-
-# Upgrade with new values
-helm upgrade typewiki-api deploy/k8s/typewiki-api/ -f my-values.yaml
-
-# Uninstall
-helm uninstall typewiki-api
-```
-
-#### Airflow Ingestion Pipeline
-
-```bash
-# Install Airflow CronJob (runs daily at 2 AM by default)
-helm install typewiki-airflow deploy/k8s/typewiki-airflow/ \
-  --set secrets.openaiApiKey=<your-openai-key> \
-  --set secrets.pineconeApiKey=<your-pinecone-key>
-
-# Trigger manual ingestion
-kubectl create job --from=cronjob/typewiki-airflow typewiki-airflow-manual
-```
+Helm charts are provided for deploying to Kubernetes clusters. These are rough examples as they can 
+really vary based on different organisations and their infrastructure considerations. 
 
 #### Production Considerations
 
 For production Kubernetes deployments:
 
-1. **Secrets Management**: Use external secret management (e.g., External Secrets Operator, HashiCorp Vault) instead of Helm-managed secrets
-2. **Image Registry**: Push images to a container registry (ECR, GCR, Docker Hub) and update `image.repository` in values
+1. **Secrets Management**: Use external secret management (e.g., External Secrets Operator, 1Password) instead of Helm-managed secrets
+2. **Image Registry**: Push images to a container registry (ECR, GCR, Docker Hub)
 3. **Ingress**: Enable and configure ingress for external access
-4. **Airflow**: Consider using the [official Apache Airflow Helm Chart](https://airflow.apache.org/docs/helm-chart/stable/index.html) for production workloads with proper database backend
+4. **Airflow**: Probably should use the [official Apache Airflow Helm Chart](https://airflow.apache.org/docs/helm-chart/stable/index.html) for production workloads with proper database backend
 
 ---
 
