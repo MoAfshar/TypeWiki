@@ -20,6 +20,7 @@ class TypeWikiInstance(Starlette):
         super().__init__(on_startup=[self.on_startup], on_shutdown=[self.on_shutdown], **kwargs)
         self._register_endpoints()
         self.setup_middlewares()
+        self.setup_exception_handlers()
 
     def setup_middlewares(self):
         self.add_middleware(
@@ -34,6 +35,9 @@ class TypeWikiInstance(Starlette):
             if callable(attribute) and hasattr(attribute, '_route_settings'):
                 for path, method in attribute._route_settings:
                     self.add_route(path, attribute, methods=[method])
+
+    def setup_exception_handlers(self):
+        pass
 
     async def on_startup(self):
         """This method will be called on application start before any requests are processed."""
