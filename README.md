@@ -44,7 +44,7 @@ xcode-select --install
    cp template.env .env
    ```
    Edit `.env` and set your values:
-   - `AIRFLOW_HOME` - Path to the Airflow directory (defaults to `src/typewiki/airflow`)
+   - `AIRFLOW_HOME` - **Full absolute path** to the Airflow directory (e.g., `/Users/you/TypeWiki/src/typewiki/airflow`). Relative paths will not work.
    - `OPENAI_API_KEY` - Your OpenAI API key
    - `OPENAI_MODEL_NAME` - The LLM model to use. `gpt-5-mini` provides more detailed responses, while `gpt-4o-mini` offers much quicker response times. Try both to see which suits your needs.
    - `OPENAI_EMBEDDING_MODEL_NAME` - Embedding model for RAG (e.g., `text-embedding-3-large`)
