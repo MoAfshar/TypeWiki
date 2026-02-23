@@ -46,7 +46,7 @@ xcode-select --install
    Edit `.env` and set your values:
    - `AIRFLOW_HOME` - Path to the Airflow directory (defaults to `src/typewiki/airflow`)
    - `OPENAI_API_KEY` - Your OpenAI API key
-   - `OPENAI_MODEL_NAME` - The LLM model to use (e.g., `gpt-4o-mini`)
+   - `OPENAI_MODEL_NAME` - The LLM model to use. `gpt-5-mini` provides more detailed responses, while `gpt-4o-mini` offers much quicker response times. Try both to see which suits your needs.
    - `OPENAI_EMBEDDING_MODEL_NAME` - Embedding model for RAG (e.g., `text-embedding-3-large`)
    - `PINECONE_API_KEY` - Your Pinecone API key for vector storage
    - `PINECONE_INDEX_NAME` - Name of your Pinecone index
@@ -63,17 +63,17 @@ The project uses Apache Airflow to orchestrate the Help Center PDF ingestion pip
 
 ### Initialize Airflow (One-Time)
 
+**Note on JWT Secret:** Airflow 3.x requires a JWT secret for internal API authentication. The Makefile includes a default secret for local development, but you can set your own by exporting `AIRFLOW_API_AUTH_JWT_SECRET` in your environment:
+
+```bash
+# Generate and export a custom JWT secret
+export AIRFLOW_API_AUTH_JWT_SECRET=$(openssl rand -hex 32)
+```
+
 After installing dependencies, initialize the Airflow database:
 
 ```bash
 make airflow-init
-```
-
-**Note on JWT Secret:** Airflow 3.x requires a JWT secret for internal API authentication. The Makefile includes a default secret for local development, but you can set your own by exporting `AIRFLOW_API_AUTH_JWT_SECRET` in your environment:
-
-```bash
-# Generate and export a custom JWT secret (optional for local dev)
-export AIRFLOW_API_AUTH_JWT_SECRET=$(openssl rand -hex 32)
 ```
 
 If you encounter "Signature verification failed" errors after changing the secret, run `make airflow-clean` to reset the Airflow database.
@@ -146,6 +146,44 @@ The API will be available at **http://localhost:8000**.
   "session_id": "unique-session-id",
   "message": "How do I create a multi-language form?",
   "history": []
+}
+```
+
+**Example with conversation history (multi-language forms):**
+
+```json
+{
+  "session_id": "user-123-session",
+  "message": "Can I add more languages after I create the form?",
+  "history": [
+    {
+      "role": "user",
+      "content": "How do I create a multi-language form?"
+    },
+    {
+      "role": "assistant",
+      "content": "To create a multi-language form in Typeform, you need to enable the multi-language feature in your form settings. This allows you to add translations for different languages so respondents can switch between them."
+    }
+  ]
+}
+```
+
+**Example with conversation history (multi-question pages):**
+
+```json
+{
+  "session_id": "user-456-session",
+  "message": "What types of questions can I group together on the same page?",
+  "history": [
+    {
+      "role": "user",
+      "content": "How do I add a multi-question page to my form?"
+    },
+    {
+      "role": "assistant",
+      "content": "To add a Multi-Question Page to your Typeform, you can group multiple questions together so respondents see them on a single screen instead of one question at a time. This is useful for collecting related information efficiently."
+    }
+  ]
 }
 ```
 
